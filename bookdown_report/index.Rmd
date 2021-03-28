@@ -2,7 +2,7 @@
 title: "Classifying Fake News using NLP and ML"
 author: "Oliver Baldwin Edwards"
 date: "December 11, 2020"
-description: "An introductory look at using NLP and ML to classify news articles"  
+description: "An introductory look at using NLP and ML to classify news articles."  
 bibliography: bibliography.bib
 biblio-style: apalike
 link-citations: yes
@@ -13,7 +13,7 @@ site: bookdown::bookdown_site
 output: bookdown::gitbook 
 delete_merged_file: true
   # keep_tex: yes 
-# output_dir: "docs"
+output_dir: "../docs"
 documentclass: book 
 ---
 
