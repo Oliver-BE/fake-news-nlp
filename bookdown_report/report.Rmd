@@ -11,8 +11,9 @@ link-citations: yes
 #   - \usepackage{xcolor}
 site: bookdown::bookdown_site
 output: bookdown::gitbook 
-output_dir: "docs"
+delete_merged_file: true
   # keep_tex: yes 
+# output_dir: "docs"
 documentclass: book 
 ---
 
