@@ -1,0 +1,180 @@
+---
+title: "Untitled"
+author: "Oliver"
+date: "12/5/2020"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+library(rpart)
+library(tree)
+library(ISLR)
+library(yardstick)
+library(partykit)
+library(mosaic)   # Load additional packages here 
+library(dplyr)
+library(tidyverse)
+library(tidymodels)
+library(knitr)
+library(yardstick)
+library(rpart)
+library(text2vec)
+library(data.table)
+library(e1071)
+library(caret)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+READ IN DATA
+```{r}
+### DATAFRAME ########################################################################
+politifact_df_raw <- read_csv("../data-raw/politifact_phase2_clean_2018_7_3.csv")  
+ 
+# clean up data
+politifact_df_cleaned <- politifact_df_raw %>% 
+  # get rid of duplicate URLs 
+  distinct(politifact_url_phase1, .keep_all = TRUE) %>%  
+  filter(fact_tag_phase1 %in% c("True", "Pants on Fire!")) %>% 
+  # change desired targets to (categorical) numbers #### changed to numeric for keras 
+  mutate(fact_tag_phase1 = as.numeric(ifelse(fact_tag_phase1 == "True", 1, 0))) %>% 
+  select(politifact_url_phase1, article_claim_phase1, original_article_text_phase2, fact_tag_phase1)
+
+# add an id 
+politifact_df_cleaned$id <- seq.int(nrow(politifact_df_cleaned))
+politifact_df_cleaned <- politifact_df_cleaned %>% 
+  select(id, article_claim_phase1, original_article_text_phase2, fact_tag_phase1)
+
+glimpse(politifact_df_cleaned)  
+
+
+# refactor df for corpus 
+politifact_corpus_df <- politifact_df_cleaned %>% 
+  rename(doc_id = id,
+         original_text = article_claim_phase1) %>%  
+  mutate(text = lemmatize_strings(removePunctuation(original_text))) %>%   
+  select(doc_id, text, fact_tag_phase1)
+
+politifact_corpus_df_text_final <-  politifact_corpus_df %>%  
+  mutate(text = stripWhitespace(
+    removeWords(
+      tolower(
+        removeNumbers(text)
+        ), stopwords("en")
+      ) 
+    )
+  )
+```
+
+
+```{r}
+set.seed(2) 
+
+# 80%: training data, 20%: test data
+random <- sample(1:nrow(politifact_corpus_df_text_final), 0.8 * nrow(politifact_corpus_df_text_final)) 
+train  <- politifact_corpus_df_text_final[random, ]
+test  <- politifact_corpus_df_text_final[-random, ]
+```
+
+```{r}
+# TRAINING
+tokenizer_train <- word_tokenizer(train$text)
+train_tokenized <-  itoken(tokenizer_train, ids = train$doc_id, progressbar = FALSE)
+   
+vocab <-  create_vocabulary(train_tokenized, ngram = c(1L, 3L))
+vocab <-  prune_vocabulary(vocab, term_count_min = 5)
+ 
+vectorizer <- vocab_vectorizer(vocab) 
+dtm_news_train <- create_dtm(train_tokenized, vectorizer) 
+
+tfidf <- TfIdf$new()
+# fit model to train data and transform train data with fitted model
+dtm_news_train <-  fit_transform(dtm_news_train, tfidf)
+###############################################################
+# TESTING
+tokenizer_test <- word_tokenizer(test$text)
+test_tokenized <- itoken(tokenizer_test, ids = test$doc_id, progressbar = FALSE)
+
+# (vocab already taken care of so go right to dtm)
+dtm_news_test <- create_dtm(test_tokenized, vectorizer)  
+dtm_news_test <- transform(dtm_news_test, tfidf)
+```
+
+```{r}
+# dtm back into df
+final_train_df <- as.data.frame(as.matrix(dtm_news_train))
+final_train_df$targetValues <- as.factor(train$'fact_tag_phase1')
+glimpse(final_train_df)
+
+final_test_df <- as.data.frame(as.matrix(dtm_news_test))
+final_test_df$targetValues <- as.factor(test$'fact_tag_phase1')
+glimpse(final_test_df)
+```
+
+```{r}
+x_train <- final_train_df %>% 
+  select(-targetValues)
+
+x_test <- final_test_df %>% 
+  select(-targetValues)
+
+y_train <- final_train_df %>% 
+  select(targetValues)
+
+y_test <- final_test_df %>% 
+  select(targetValues)
+```
+
+LOGISTIC REGRESSION MODEL BASIC (needs targets as ints)
+```{r} 
+logistic_model_1 <- glm(targetValues ~., data = final_train_df,
+                            family = binomial(link = "logit"))
+ 
+predicted_value_probs <- predict(logistic_model_1, newdata = final_test_df,
+                            type = "response")
+predicted_values <- as.factor(ifelse(predicted_value_probs > 0.5, 1, 0))
+
+caret::confusionMatrix(predicted_values, y_test$targetValues)
+# 61 percent
+```
+
+LOGISTIC REGRESSION MODEL WITH L1 penalty and 4 fold cross-validation.
+(L1 regularization adds an L1 penalty equal to the absolute value of the magnitude of coefficients. In other words, it limits the size of the coefficients)
+https://cran.r-project.org/web/packages/text2vec/vignettes/text-vectorization.html#vocabulary-based_vectorization
+```{r} 
+# this function needs a matrix as input
+x_train <- as.matrix(x_train)
+x_test <- as.matrix(x_test)
+```
+
+```{r}
+NFOLDS <- 9
+glmnet_classifier <- cv.glmnet(x = x_train, y = y_train$targetValues, 
+                              # this tells us logistic 
+                              family = 'binomial', 
+                              # L1 penalty
+                              alpha = 1,
+                              # interested in the area under ROC curve
+                              type.measure = "auc",
+                              # 5-fold cross-validation
+                              nfolds = NFOLDS,
+                              # high value is less accurate, but has faster training
+                              thresh = 1e-4,
+                              # again lower number of iterations for faster training
+                              maxit = 1e5)
+
+plot(glmnet_classifier)
+print(paste("max AUC =", round(max(glmnet_classifier$cvm), 4)))
+```
+
+```{r}
+prediction_probs_glmnet <- predict(glmnet_classifier, x_test,
+                              type = "response")
+
+predicted_values_glmnet <- as.factor(ifelse(prediction_probs_glmnet > 0.5, 1, 0))
+
+caret::confusionMatrix(predicted_values_glmnet, y_test$targetValues)
+#70.7 percent
+```
+

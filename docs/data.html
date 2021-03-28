@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+<head>
+
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>3 Data | Classifying Fake News using NLP and ML</title>
+  <meta name="description" content="An introductory look at using NLP and ML to classify news articles" />
+  <meta name="generator" content="bookdown 0.21 and GitBook 2.6.7" />
+
+  <meta property="og:title" content="3 Data | Classifying Fake News using NLP and ML" />
+  <meta property="og:type" content="book" />
+  
+  
+  <meta property="og:description" content="An introductory look at using NLP and ML to classify news articles" />
+  
+
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="3 Data | Classifying Fake News using NLP and ML" />
+  
+  <meta name="twitter:description" content="An introductory look at using NLP and ML to classify news articles" />
+  
+
+<meta name="author" content="Oliver Baldwin Edwards" />
+
+
+<meta name="date" content="2020-12-11" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  
+  
+<link rel="prev" href="background.html"/>
+<link rel="next" href="model-fitting.html"/>
+<script src="libs/header-attrs-2.5/header-attrs.js"></script>
+<script src="libs/jquery-2.2.3/jquery.min.js"></script>
+<link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-bookdown.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-highlight.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-search.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-fontsettings.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-clipboard.css" rel="stylesheet" />
+
+
+
+
+
+
+
+
+
+<link href="libs/anchor-sections-1.0/anchor-sections.css" rel="stylesheet" />
+<script src="libs/anchor-sections-1.0/anchor-sections.js"></script>
+
+
+<style type="text/css">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+</head>
+
+<body>
+
+
+
+  <div class="book without-animation with-summary font-size-2 font-family-1" data-basepath=".">
+
+    <div class="book-summary">
+      <nav role="navigation">
+
+<ul class="summary">
+<li class="chapter" data-level="" data-path="preface.html"><a href="preface.html"><i class="fa fa-check"></i>Preface</a></li>
+<li class="chapter" data-level="1" data-path="introduction.html"><a href="introduction.html"><i class="fa fa-check"></i><b>1</b> Introduction</a></li>
+<li class="chapter" data-level="2" data-path="background.html"><a href="background.html"><i class="fa fa-check"></i><b>2</b> Background</a>
+<ul>
+<li class="chapter" data-level="2.1" data-path="background.html"><a href="background.html#natural-language-processing"><i class="fa fa-check"></i><b>2.1</b> Natural Language Processing</a>
+<ul>
+<li class="chapter" data-level="2.1.1" data-path="background.html"><a href="background.html#reducing-a-vocabulary-with-lemmatization-and-stop-words"><i class="fa fa-check"></i><b>2.1.1</b> Reducing a Vocabulary with Lemmatization and Stop Words</a></li>
+<li class="chapter" data-level="2.1.2" data-path="background.html"><a href="background.html#bag-of-words"><i class="fa fa-check"></i><b>2.1.2</b> Bag-of-Words Model for Feature Extraction</a></li>
+</ul></li>
+<li class="chapter" data-level="2.2" data-path="background.html"><a href="background.html#deep-learning-models"><i class="fa fa-check"></i><b>2.2</b> Deep Learning Models</a>
+<ul>
+<li class="chapter" data-level="2.2.1" data-path="background.html"><a href="background.html#multilayer-perceptrons"><i class="fa fa-check"></i><b>2.2.1</b> Multilayer Perceptrons</a></li>
+<li class="chapter" data-level="2.2.2" data-path="background.html"><a href="background.html#recurrent-neural-networks"><i class="fa fa-check"></i><b>2.2.2</b> Recurrent Neural Networks</a></li>
+</ul></li>
+</ul></li>
+<li class="chapter" data-level="3" data-path="data.html"><a href="data.html"><i class="fa fa-check"></i><b>3</b> Data</a>
+<ul>
+<li class="chapter" data-level="3.1" data-path="data.html"><a href="data.html#data-cleaning"><i class="fa fa-check"></i><b>3.1</b> Data Cleaning</a></li>
+<li class="chapter" data-level="3.2" data-path="data.html"><a href="data.html#exploratory-data-analysis"><i class="fa fa-check"></i><b>3.2</b> Exploratory Data Analysis</a></li>
+</ul></li>
+<li class="chapter" data-level="4" data-path="model-fitting.html"><a href="model-fitting.html"><i class="fa fa-check"></i><b>4</b> Model Fitting</a></li>
+<li class="chapter" data-level="5" data-path="results.html"><a href="results.html"><i class="fa fa-check"></i><b>5</b> Results</a></li>
+<li class="chapter" data-level="6" data-path="conclusion.html"><a href="conclusion.html"><i class="fa fa-check"></i><b>6</b> Conclusion</a>
+<ul>
+<li class="chapter" data-level="6.1" data-path="conclusion.html"><a href="conclusion.html#limitations"><i class="fa fa-check"></i><b>6.1</b> Limitations</a></li>
+<li class="chapter" data-level="6.2" data-path="conclusion.html"><a href="conclusion.html#future-work"><i class="fa fa-check"></i><b>6.2</b> Future Work</a></li>
+</ul></li>
+<li class="chapter" data-level="7" data-path="appendix.html"><a href="appendix.html"><i class="fa fa-check"></i><b>7</b> Appendix</a>
+<ul>
+<li class="chapter" data-level="7.1" data-path="appendix.html"><a href="appendix.html#appendix-data"><i class="fa fa-check"></i><b>7.1</b> Data Wrangling/Feature Extraction</a>
+<ul>
+<li class="chapter" data-level="7.1.1" data-path="appendix.html"><a href="appendix.html#basic-data-wrangling"><i class="fa fa-check"></i><b>7.1.1</b> Basic Data Wrangling</a></li>
+<li class="chapter" data-level="7.1.2" data-path="appendix.html"><a href="appendix.html#cleaning-the-textreducing-the-vocabulary-size"><i class="fa fa-check"></i><b>7.1.2</b> Cleaning the Text/Reducing the Vocabulary Size</a></li>
+<li class="chapter" data-level="7.1.3" data-path="appendix.html"><a href="appendix.html#traintest-split"><i class="fa fa-check"></i><b>7.1.3</b> Train/Test Split</a></li>
+<li class="chapter" data-level="7.1.4" data-path="appendix.html"><a href="appendix.html#feature-extraction"><i class="fa fa-check"></i><b>7.1.4</b> Creating a Document Term Matrix</a></li>
+</ul></li>
+<li class="chapter" data-level="7.2" data-path="appendix.html"><a href="appendix.html#appendix-initial-models"><i class="fa fa-check"></i><b>7.2</b> Initial Model Fitting</a>
+<ul>
+<li class="chapter" data-level="7.2.1" data-path="appendix.html"><a href="appendix.html#naive-bayes"><i class="fa fa-check"></i><b>7.2.1</b> Naive Bayes</a></li>
+<li class="chapter" data-level="7.2.2" data-path="appendix.html"><a href="appendix.html#basic-logistic-regression"><i class="fa fa-check"></i><b>7.2.2</b> Basic Logistic Regression</a></li>
+<li class="chapter" data-level="7.2.3" data-path="appendix.html"><a href="appendix.html#logistic-regresion-with-l1-penalty-lasso-regression"><i class="fa fa-check"></i><b>7.2.3</b> Logistic Regresion with L1 penalty (Lasso Regression)</a></li>
+<li class="chapter" data-level="7.2.4" data-path="appendix.html"><a href="appendix.html#support-vector-machine"><i class="fa fa-check"></i><b>7.2.4</b> Support Vector Machine</a></li>
+<li class="chapter" data-level="7.2.5" data-path="appendix.html"><a href="appendix.html#random-forest"><i class="fa fa-check"></i><b>7.2.5</b> Random Forest</a></li>
+</ul></li>
+<li class="chapter" data-level="7.3" data-path="appendix.html"><a href="appendix.html#appendix-deeplearning-models"><i class="fa fa-check"></i><b>7.3</b> Deep Learning Model Fitting</a>
+<ul>
+<li class="chapter" data-level="7.3.1" data-path="appendix.html"><a href="appendix.html#multilayer-perceptron-neural-network"><i class="fa fa-check"></i><b>7.3.1</b> Multilayer Perceptron Neural Network</a></li>
+<li class="chapter" data-level="7.3.2" data-path="appendix.html"><a href="appendix.html#recurrent-neural-network"><i class="fa fa-check"></i><b>7.3.2</b> Recurrent Neural Network</a></li>
+</ul></li>
+</ul></li>
+<li class="chapter" data-level="" data-path="references.html"><a href="references.html"><i class="fa fa-check"></i>References</a></li>
+</ul>
+
+      </nav>
+    </div>
+
+    <div class="book-body">
+      <div class="body-inner">
+        <div class="book-header" role="navigation">
+          <h1>
+            <i class="fa fa-circle-o-notch fa-spin"></i><a href="./">Classifying Fake News using NLP and ML</a>
+          </h1>
+        </div>
+
+        <div class="page-wrapper" tabindex="-1" role="main">
+          <div class="page-inner">
+
+            <section class="normal" id="section-">
+<div id="data" class="section level1" number="3">
+<h1><span class="header-section-number">3</span> Data</h1>
+<p></p>
+<p>The data used in this project comes from PolitiFact, a fact-checking website. Articles, their claims, and the associated truth-levels of those claims are web-scraped from PolitiFact by the Discourse Processing Lab at Simon Fraser University<a href="#fn23" class="footnote-ref" id="fnref23"><sup>23</sup></a>. The Discourse Processing Lab provides a web-scraping tool for multiple fact checking websites, including PolitiFact and Snopes. The dataset web-scraped from PolitiFact was chosen over the one from Snopes due to the fact that PolitiFact has six levels of truth compared to Snopes’ two. The web-scraping works in two parts: first, information is downloaded from the selected source such as the claim being assessed, the assessment of that claim, and all links to articles that are mentioned in the assessment. (That information is all added to the final dataset.) Then, the link most likely to contain the article being labeled/assessed is selected, and the original text from that article is downloaded and added to the dataset.</p>
+<p>The PolitiFact dataset includes columns such as the original PolitiFact URL, the PolitiFact truth rating, the claim of the article being assessed, the URL and text from the article where the claim came from, and the category into which the claim being assessed falls. The levels of truth are described by PolitiFact as the following:</p>
+<ul>
+<li><strong>True (1)</strong>: The statement is accurate and there’s nothing significant missing.</li>
+<li><strong>Mostly True (2)</strong>: The statement is accurate but needs clarification or additional information.</li>
+<li><strong>Half-True (3)</strong>: The statement is partially accurate but leaves out important details or takes things out of context.</li>
+<li><strong>Mostly False (4)</strong>: The statement contains an element of truth but ignores critical facts that would give a different impression.</li>
+<li><strong>False (5)</strong>: The statement is not accurate.</li>
+<li><strong>Pants on Fire! (6)</strong>: The statement is not accurate and makes a ridiculous claim.</li>
+</ul>
+<p>To simplify the task of classification in this project, only two of the above truth levels were used in this project. Specifically, only the PolitiFact claims rated as “True” (<span class="math inline">\(1\)</span>) or “Pants on Fire!” (<span class="math inline">\(6\)</span>) were used. A process where all ratings from 1-3 were classified as “True” and all ratings from 4-6 were classified as “False” was attempted, but this resulted in worse model performance. More discussion of this can be found in Section <a href="conclusion.html#limitations">6.1</a>.</p>
+<div id="data-cleaning" class="section level2" number="3.1">
+<h2><span class="header-section-number">3.1</span> Data Cleaning</h2>
+<p>Each entry in this dataset contains a claim that PolitiFact has assigned a certain truth value. Since multiple external news articles can discuss the same claim, there can be a single PolitiFact claim/associated truth value associated with multiple different articles, and thus multiple different bodies of text. For example, the first three entries in the raw dataset are all from the same PolitiFact entry which rates the phrase <em>“Trump approval rating better than Obama and Reagan at same point in their presidencies.”</em> as Mostly True. The reason there are three entries from this same PolitiFact article (which are all from the exact same PolitiFact URL) is because multiple news sources (in this case Fox, NBC, and FiveThirtyEight) all reported on this claim. In an effort to cut down on the number of duplicate claims such as these, I have only kept the top entry from each unique PolitiFact URL (even though the three articles contain different textual content). The reason for the removal of duplicate entries is further discussed in Section <a href="conclusion.html#limitations">6.1</a>.</p>
+<p>In addition to removing duplicate PolitiFact entries, the two targets of interest (mentioned in the previous section) were filtered, selected, and converted to numbers. After this, the remaining data cleaning involved tidying the text of the claims associated with our different targets as well as reducing the size of the overall vocabulary of words (for the sake of bag-of-words feature extraction). In particular, this involved using basic text-cleaning methodologies (such as removing any punctuation), removing stop words, and using lemmatization. To see the full data cleaning done in this project, see Section <a href="appendix.html#appendix-data">7.1</a>.</p>
+</div>
+<div id="exploratory-data-analysis" class="section level2" number="3.2">
+<h2><span class="header-section-number">3.2</span> Exploratory Data Analysis</h2>
+<p>After the full text cleaning and vocabulary reduction described previously (and shown fully in Section <a href="appendix.html#appendix-data">7.1</a>), the vocabulary has <span class="math inline">\(806\)</span> terms (across <span class="math inline">\(1911\)</span> documents). To check if this text cleaning was done properly, we can compare a few selected article claim documents before and after they were cleaned:</p>
+<pre><code>## [1] &quot;\&quot;Investigators: Anthony Bourdain was killed by Clinton operatives.\&quot;&quot;</code></pre>
+<pre><code>## [1] &quot;investigator anthony bourdain kill clinton operative&quot;</code></pre>
+<pre><code>## [1] &quot;Says that people \&quot;went out in their boats to watch\&quot; Hurricane Harvey.&quot;</code></pre>
+<pre><code>## [1] &quot;say people go boat watch hurricane harvey&quot;</code></pre>
+<p>Since everything is now working as expected, the final thing to explore is the most frequently used terms in the vocabulary.<a href="#fn24" class="footnote-ref" id="fnref24"><sup>24</sup></a> To get a sense of the the most frequently used terms in the vocabulary, Figure <a href="data.html#fig:word-freq">3.1</a> displays the top ten most frequently used words in the PolitiFact text corpus.</p>
+<div class="figure"><span id="fig:word-freq"></span>
+<img src="report_files/figure-html/word-freq-1.png" alt="A barplot showing the most frequent words in the PolitiFact vocabulary after text cleaning" width="576"  />
+<p class="caption">
+Figure 3.1: A barplot showing the most frequent words in the PolitiFact vocabulary after text cleaning
+</p>
+</div>
+<p>It appears that the word “say” was by far the most used word, with <span class="math inline">\(417\)</span> occurrences. This is a fairly common word (that is not a stop word), so this makes sense. It is reasonable to keep “say” in this context as the act of “stating” something may be important in classifying fake news. We also observe that no classic stop word (such as “the”) appears in this barplot, which is what we expect. Lastly, words such as “obama,” “president,” and “trump” also appear in the bar plot. Since PolitiFact primarily deals with fact-checking political claims, this makes sense.</p>
+<p>With successful text cleaning and feature extraction, it is time to fit machine learning models to the data. (Note that the full code for the process of feature extraction mirrors that of the previous example in Section <a href="background.html#bag-of-words">2.1.2</a> and can be seen fully in Section <a href="appendix.html#feature-extraction">7.1.4</a>.)</p>
+<div style="page-break-after: always;"></div>
+<div style="page-break-after: always;"></div>
+</div>
+</div>
+<div class="footnotes">
+<hr />
+<ol start="23">
+<li id="fn23"><p><span class="citation"><a href="references.html#ref-taboadaFakeNewsDetection" role="doc-biblioref">Taboada and Torabi Asr</a> (<a href="references.html#ref-taboadaFakeNewsDetection" role="doc-biblioref">n.d.</a>)</span><a href="data.html#fnref23" class="footnote-back">↩︎</a></p></li>
+<li id="fn24"><p>Note that it doesn’t make sense to visualize the DTM here because it is far too large to fully look at, and DTMs are inherently sparse. The DTMs were examined and work properly. They can be seen further in <a href="appendix.html#appendix-data">7.1</a>.<a href="data.html#fnref24" class="footnote-back">↩︎</a></p></li>
+</ol>
+</div>
+            </section>
+
+          </div>
+        </div>
+      </div>
+<a href="background.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="model-fitting.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+    </div>
+  </div>
+<script src="libs/gitbook-2.6.7/js/app.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/lunr.js"></script>
+<script src="libs/gitbook-2.6.7/js/clipboard.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-search.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-sharing.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-fontsettings.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-bookdown.js"></script>
+<script src="libs/gitbook-2.6.7/js/jquery.highlight.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-clipboard.js"></script>
+<script>
+gitbook.require(["gitbook"], function(gitbook) {
+gitbook.start({
+"sharing": {
+"github": false,
+"facebook": true,
+"twitter": true,
+"linkedin": false,
+"weibo": false,
+"instapaper": false,
+"vk": false,
+"all": ["facebook", "twitter", "linkedin", "weibo", "instapaper"]
+},
+"fontsettings": {
+"theme": "white",
+"family": "sans",
+"size": 2
+},
+"edit": {
+"link": null,
+"text": null
+},
+"history": {
+"link": null,
+"text": null
+},
+"view": {
+"link": null,
+"text": null
+},
+"download": null,
+"toc": {
+"collapse": "subsection"
+},
+"search": false
+});
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    var src = "true";
+    if (src === "" || src === "true") src = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML";
+    if (location.protocol !== "file:")
+      if (/^https?:/.test(src))
+        src = src.replace(/^https?:/, '');
+    script.src = src;
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+</body>
+
+</html>

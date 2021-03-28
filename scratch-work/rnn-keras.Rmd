@@ -1,0 +1,170 @@
+---
+title: "Untitled"
+author: "Oliver"
+date: "12/5/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(rpart)
+library(tree)
+library(ISLR)
+library(yardstick)
+library(partykit)
+library(mosaic)   # Load additional packages here 
+library(dplyr)
+library(tidyverse)
+library(tidymodels)
+library(knitr)
+library(yardstick)
+library(rpart)
+library(text2vec)
+library(data.table)
+library(e1071)
+library(caret)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+READ IN DATA
+```{r}
+### DATAFRAME ########################################################################
+politifact_df_raw <- read_csv("../data-raw/politifact_phase2_clean_2018_7_3.csv")  
+ 
+# clean up data
+politifact_df_cleaned <- politifact_df_raw %>% 
+  # get rid of duplicate URLs 
+  distinct(politifact_url_phase1, .keep_all = TRUE) %>%  
+  filter(fact_tag_phase1 %in% c("True", "Pants on Fire!")) %>% 
+  # change desired targets to (categorical) numbers #### changed to numeric for keras 
+  mutate(fact_tag_phase1 = as.numeric(ifelse(fact_tag_phase1 == "True", 1, 0))) %>% 
+  select(politifact_url_phase1, article_claim_phase1, original_article_text_phase2, fact_tag_phase1)
+
+# add an id 
+politifact_df_cleaned$id <- seq.int(nrow(politifact_df_cleaned))
+politifact_df_cleaned <- politifact_df_cleaned %>% 
+  select(id, article_claim_phase1, original_article_text_phase2, fact_tag_phase1)
+
+glimpse(politifact_df_cleaned)  
+
+
+# refactor df for corpus 
+politifact_corpus_df <- politifact_df_cleaned %>% 
+  rename(doc_id = id,
+         original_text = article_claim_phase1) %>%  
+  mutate(text = lemmatize_strings(removePunctuation(original_text))) %>%   
+  select(doc_id, text, fact_tag_phase1)
+
+politifact_corpus_df_text_final <-  politifact_corpus_df %>%  
+  mutate(text = stripWhitespace(
+    removeWords(
+      tolower(
+        removeNumbers(text)
+        ), stopwords("en")
+      ) 
+    )
+  )
+```
+
+
+```{r}
+set.seed(2)
+
+# 80%: training data, 20%: test data
+random <- sample(1:nrow(politifact_corpus_df_text_final), 0.8 * nrow(politifact_corpus_df_text_final)) 
+train  <- politifact_corpus_df_text_final[random, ]
+test  <- politifact_corpus_df_text_final[-random, ]
+```
+
+```{r} 
+y_train <- train$fact_tag_phase1
+y_test <- test$fact_tag_phase1
+```
+
+Test for balance of targets in train/test split
+```{r}
+#Proportion for train targets
+prop.table(table(y_train))
+
+#Proportion for test targets
+prop.table(table(y_test))
+```
+
+# now take original dataset and transform words into their numbers
+ https://www.onceupondata.com/2019/01/21/keras-text-part1/
+```{r} 
+# the number of words to include
+vocab_size <- 1000
+# note that this is based on the training data
+tokenizer <- text_tokenizer(num_words = vocab_size) %>% 
+  fit_text_tokenizer(train$text)
+
+train_sequences <- texts_to_sequences(tokenizer, train$text)
+test_sequences <- texts_to_sequences(tokenizer, test$text)
+
+# x_train <- train_sequences[random]
+# x_test  <- test_sequences[-random]
+x_train <-  pad_sequences(train_sequences, padding = "post")
+x_test <- pad_sequences(test_sequences, padding = "post") 
+```
+
+RNN
+```{r}
+rnn_model <- keras_model_sequential()  %>%
+  layer_embedding(input_dim = vocab_size, output_dim = 64) %>%  
+  layer_lstm(units = 128, dropout = 0.2, recurrent_dropout = 0.2) %>% 
+  layer_dense(units = 1, activation = "sigmoid")
+ 
+rnn_model %>% compile(
+  optimizer = "adam",
+  loss = "binary_crossentropy",
+  metrics = c("accuracy")
+)
+
+batch_size       <- 64
+epochs           <- 15
+validation_split <- 0.1
+
+rnn_history <- rnn_model %>% keras::fit(
+  x_train, y_train,
+  batch_size = batch_size,
+  epochs = epochs,
+  validation_split = validation_split
+)
+plot(rnn_history)
+```
+
+```{r} 
+# recompile model
+rnn_model <- keras_model_sequential()  %>%
+  layer_embedding(input_dim = vocab_size, output_dim = 64) %>% 
+  layer_lstm(units = 128, dropout = 0.2, recurrent_dropout = 0.2) %>% 
+  layer_dense(units = 1, activation = "sigmoid")
+ 
+
+rnn_model %>% compile(
+  optimizer = "adam",
+  loss = "binary_crossentropy",
+  metrics = c("accuracy")
+)
+
+rnn_model %>% keras::fit(x_train, y_train, epochs = 3, batch_size = batch_size)
+rnn_results <- rnn_model %>% evaluate(x_test, y_test)
+rnn_predicted_values <- rnn_model %>% predict_classes(x_test, batch_size = batch_size)
+
+# Confusion matrix
+# table(y_test, rnn_classes)
+# around 71%
+
+# Confusion matrix
+rnn_confusion_matrix <- caret::confusionMatrix(as.factor(rnn_predicted_values),
+                                              as.factor(y_test),
+                                              dnn = c("Predicted", "Actual"))
+
+# confusion matrix table
+rnn_confusion_matrix$table
+# around 71% accuracy
+round(rnn_confusion_matrix$overall[1], 3) 
+# 95% CI : (0.6619, 0.7551)
+round(rnn_confusion_matrix$overall[3:4], 3)  
+```
+
