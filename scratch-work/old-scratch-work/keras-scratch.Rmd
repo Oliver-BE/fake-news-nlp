@@ -1,0 +1,478 @@
+---
+title: "Untitled"
+author: "Oliver"
+date: "11/29/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(mosaic)
+```
+
+############
+logisitc regression start
+https://cran.r-project.org/web/packages/text2vec/vignettes/text-vectorization.html#n-grams
+```{r}
+library(text2vec)
+library(data.table) 
+# set.seed(2016L)
+set.seed(2)
+
+data_full_text <- politifact_corpus_df
+data_claim <- politifact_corpus_df_claim
+
+# 80%: training data, 20%: test data
+random <- sample(1:nrow(data_claim), 0.8 * nrow(data_claim)) 
+train  <- data_claim[random, ]
+test  <- data_claim[-random, ]
+```
+
+```{r} 
+prep_fun = tolower
+tok_fun = word_tokenizer
+
+it_train = tok_fun(removeWords(removeNumbers(prep_fun(train$text)), stopwords("en")))
+ 
+  
+it_train = itoken(it_train, ids = train$doc_id, 
+             progressbar = FALSE)
+# vocab = create_vocabulary(it_train)  
+vocab = create_vocabulary(it_train, ngram = c(1L, 3L))
+vocab = prune_vocabulary(vocab, term_count_min = 5)
+```
+
+```{r}
+vectorizer = vocab_vectorizer(vocab)
+t1 = Sys.time()
+dtm_train = create_dtm(it_train, vectorizer)
+print(difftime(Sys.time(), t1, units = 'sec'))
+
+tfidf = TfIdf$new()
+# fit model to train data and transform train data with fitted model
+dtm_train_tfidf = fit_transform(dtm_train, tfidf)
+
+```
+
+```{r}
+library(glmnet)
+NFOLDS = 9
+glmnet_classifier = cv.glmnet(x = dtm_train_tfidf, y = train[['fact_tag_phase1']], 
+                              # this tells us logistic 
+                              family = 'binomial', 
+                              # L1 penalty
+                              alpha = 1,
+                              # interested in the area under ROC curve
+                              type.measure = "auc",
+                              # 5-fold cross-validation
+                              nfolds = NFOLDS,
+                              # high value is less accurate, but has faster training
+                              thresh = 1e-4,
+                              # again lower number of iterations for faster training
+                              maxit = 1e5)
+
+plot(glmnet_classifier)
+print(paste("max AUC =", round(max(glmnet_classifier$cvm), 4)))
+```
+ 
+```{r}
+# Note that most text2vec functions are pipe friendly!
+it_test = tok_fun(removeWords(removeNumbers(prep_fun(test$text)), stopwords("en")))
+it_test = itoken(it_test, ids = test$doc_id, 
+                 # turn off progressbar because it won't look nice in rmd
+                 progressbar = FALSE)
+
+dtm_test = create_dtm(it_test, vectorizer)
+# tfidf modified by fit_transform() call!
+# apply pre-trained tf-idf transformation to test data
+dtm_test_tfidf = create_dtm(it_test, vectorizer)
+dtm_test_tfidf = transform(dtm_test_tfidf, tfidf)
+
+preds = predict(glmnet_classifier, dtm_test_tfidf, type = 'response')[,1]
+glmnet:::auc(test$fact_tag_phase1, preds)
+```
+
+test logisitic regression
+```{r}
+logit_train <- as.data.frame(as.matrix(dtm_train_tfidf))
+logit_train$targetValues <- train$'fact_tag_phase1'
+logitMod <- glm(targetValues ~ ., data=logit_train, family=binomial(link="logit"))
+
+# predicted <- plogis(predict(logitMod, testData))  # predicted scores
+# or
+logit_test <- as.data.frame(as.matrix(dtm_test_tfidf))
+logit_test$targetValues <- test$'fact_tag_phase1'
+#predicted <- predict(logitMod, logit_test, type="response") 
+predicted <- plogis(predict(logitMod, logit_test))
+final_pred_df <- cbind(logit_test, predicted) %>% 
+  select(predicted, targetValues) %>% 
+  mutate(predictedValue = ifelse(predicted > 0.53, 1, 0),
+         isSame = ifelse(predictedValue == targetValues, 1, 0))
+count(final_pred_df, isSame)
+#61 percent
+
+```
+
+logisitc regression end
+#####
+
+
+https://blogs.rstudio.com/ai/posts/2017-12-07-text-classification-with-keras/
+also good:
+https://www.datacamp.com/community/tutorials/keras-r-deep-learning
+## IMDB MLP
+```{r}
+library(keras)
+imdb <- dataset_imdb(num_words = 10000)
+train_data <- imdb$train$x
+train_labels <- imdb$train$y
+test_data <- imdb$test$x
+test_labels <- imdb$test$y
+```
+
+```{r}
+# bag of words (one hot encoding)
+vectorize_sequences <- function(sequences, dimension = 10000) {
+  # Creates an all-zero matrix of shape (length(sequences), dimension)
+  results <- matrix(0, nrow = length(sequences), ncol = dimension) 
+  for (i in 1:length(sequences))
+    # Sets specific indices of results[i] to 1s
+    results[i, sequences[[i]]] <- 1 
+  results
+}
+
+x_train <- vectorize_sequences(train_data)
+x_test <- vectorize_sequences(test_data)
+
+y_train <- as.numeric(train_labels)
+y_test <- as.numeric(test_labels)
+```
+ 
+```{r}
+model <- keras_model_sequential() %>% 
+  layer_dense(units = 16, activation = "relu", input_shape = c(10000)) %>% 
+  layer_dense(units = 16, activation = "relu") %>% 
+  layer_dense(units = 1, activation = "sigmoid")
+
+model %>% compile(
+  optimizer = "rmsprop",
+  loss = "binary_crossentropy",
+  metrics = c("accuracy")
+)
+```
+ 
+```{r}
+val_indices <- 1:10000
+
+x_val <- x_train[val_indices,]
+partial_x_train <- x_train[-val_indices,]
+
+y_val <- y_train[val_indices]
+partial_y_train <- y_train[-val_indices] 
+```
+ 
+```{r} 
+history <- model %>% fit(
+  partial_x_train,
+  partial_y_train,
+  epochs = 20,
+  batch_size = 512,
+  validation_data = list(x_val, y_val)
+)
+```
+ 
+```{r}
+plot(history)
+```
+ 
+ new model based on above insights
+ 
+```{r}
+model <- keras_model_sequential() %>% 
+  layer_dense(units = 16, activation = "relu", input_shape = c(10000)) %>% 
+  layer_dense(units = 16, activation = "relu") %>% 
+  layer_dense(units = 1, activation = "sigmoid")
+
+model %>% compile(
+  optimizer = "rmsprop",
+  loss = "binary_crossentropy",
+  metrics = c("accuracy")
+)
+
+model %>% fit(x_train, y_train, epochs = 4, batch_size = 512)
+results <- model %>% evaluate(x_test, y_test)
+```
+ 
+```{r}
+results
+```
+## END IMDB MLP
+
+
+### NN
+```{r}
+library(neuralnet)
+logit_train <- as.data.frame(as.matrix(dtm_train_tfidf))
+logit_train$targetValues <- train$'fact_tag_phase1' 
+predictors <- colnames(logit_train)
+# remove target column
+predictors <- predictors[- 807]
+predictors <- paste(predictors, collapse = " + ")
+formula <- formula(paste("targetValues ~ ", predictors))
+nn <- neuralnet(formula, data = logit_train, 
+                hidden = 4, act.fct = "logistic", linear.output = FALSE)
+
+logit_test <- as.data.frame(as.matrix(dtm_test_tfidf))
+logit_test$targetValues <- test$'fact_tag_phase1'
+
+Predict <- neuralnet::compute(nn, logit_test) 
+
+prob <- Predict$net.result
+pred <- ifelse(prob>0.5, 1, 0)
+pred
+
+nn_df <- cbind(logit_test, pred) %>% 
+  select(targetValues, pred) %>% 
+  mutate(isSame = ifelse(targetValues == pred, 1, 0))
+count(nn_df, isSame)
+# 64 % accuracy
+```
+
+
+for explaining NN: https://www.datacamp.com/community/tutorials/neural-network-models-r
+### RNN
+(python: https://towardsdatascience.com/multi-class-text-classification-with-lstm-1590bee1bd17)
+R: https://www.kaggle.com/rtatman/beginner-s-intro-to-rnn-s-in-r
+```{r}
+max_len <- 6 # the number of previous examples we'll look at
+batch_size <- 32 # number of sequences to look at at one time during training
+total_epochs <- 15 # how many times we'll look @ the whole dataset while training our model 
+table(politifact_corpus_df$fact_tag_phase1)
+```
+ 
+```{r}
+# Cut the text in overlapping sample sequences of max_len characters
+
+# get a list of start indexes for our (overlapping) chunks
+start_indexes <- seq(from = 1, to = nrow(politifact_corpus_df) - (max_len + 1), by = 3)
+
+# create an empty matrix to store our data in
+weather_matrix <- matrix(nrow = nrow(politifact_corpus_df), ncol = max_len + 1)
+
+# fill our matrix with the overlapping slices of our dataset
+for (i in 1:length(start_indexes)){
+  starting_value <- start_indexes[i]
+  end_value <- start_indexes[i] + max_len
+  weather_matrix[i,] <- politifact_corpus_df$fact_tag_phase1[starting_value:end_value]
+}
+
+weather_matrix <- weather_matrix * 1
+
+# remove na's if you have them
+if(anyNA(weather_matrix)){
+    weather_matrix <- na.omit(weather_matrix)
+}
+table(weather_matrix)
+```
+
+## rnn better
+https://databricks-prod-cloudfront.cloud.databricks.com/public/4027ec902e239c93eaaa8714f173bcfc/2961012104553482/4462572393058228/1806228006848429/latest.html
+
+```{r}
+politifact_corpus_df_text_final <-  politifact_corpus_df %>% 
+  #politifact_corpus_df_text
+  mutate(text = stripWhitespace(
+    removeWords(
+      tolower(
+        removeNumbers(text)
+        ), stopwords("en")
+      ) 
+    )
+  )
+    
+```
+
+```{r}
+set.seed(2) 
+data_input <- politifact_corpus_df_text_final
+max_unique_word <- 4500
+max_review_len <- 250
+ 
+
+random <- sample(1:nrow(data_input), 0.8 * nrow(data_input)) 
+train  <- data_input[random, ]
+test  <- data_input[-random, ]
+
+rnn_train <- word_tokenizer(train$text)
+rnn_train <- itoken(rnn_train, ids = train$doc_id, 
+             progressbar = FALSE)
+# vocab = create_vocabulary(it_train)  
+vocab <- create_vocabulary(rnn_train)
+vocab <- prune_vocabulary(vocab, term_count_min = 3)
+
+vocab_df <- as.data.frame(vocab)
+vocab_df$id <- seq.int(nrow(vocab_df))
+glimpse(vocab_df)
+```
+ 
+ now take original dataset and transform words into their numbers
+ https://www.onceupondata.com/2019/01/21/keras-text-part1/
+```{r} 
+tokenizer <- text_tokenizer(num_words = max_unique_word) %>% 
+  fit_text_tokenizer(data_input$text)
+
+tok_seq <- texts_to_sequences(tokenizer, data_input$text)
+
+x_train <- tok_seq[random]
+x_test  <- tok_seq[-random]
+x_train <-  pad_sequences(x_train, maxlen = max_review_len)
+x_test <- pad_sequences(x_test, maxlen = max_review_len)
+
+y_train <- train$fact_tag_phase1
+y_test <- test$fact_tag_phase1
+```
+ 
+```{r}
+rnn_model <- keras_model_sequential()  %>%
+  layer_embedding(input_dim = max_unique_word, output_dim = 128) %>% 
+  #layer_simple_rnn(units = 64, dropout = 0.2, recurrent_dropout = 0.2) %>%
+  layer_lstm(units = 128, dropout = 0.2, recurrent_dropout = 0.2) %>% 
+  layer_dense(units = 1, activation = 'sigmoid')
+ 
+
+rnn_model %>% compile(
+  loss = 'binary_crossentropy',
+  optimizer = 'adam',
+  metrics = c('accuracy')
+)
+
+batch_size = 128
+epochs = 20
+validation_split = 0.2
+
+rnn_history <- rnn_model %>% keras::fit(
+  x_train, y_train,
+  batch_size = batch_size,
+  epochs = epochs,
+  validation_split = validation_split
+)
+plot(rnn_history)
+
+# recompile model
+rnn_model <- keras_model_sequential()  %>%
+  layer_embedding(input_dim = max_unique_word, output_dim = 128) %>% 
+  #layer_simple_rnn(units = 64, dropout = 0.2, recurrent_dropout = 0.2) %>%
+  layer_lstm(units = 128, dropout = 0.2, recurrent_dropout = 0.2) %>% 
+  layer_dense(units = 1, activation = 'sigmoid')
+ 
+
+rnn_model %>% compile(
+  loss = 'binary_crossentropy',
+  optimizer = 'adam',
+  metrics = c('accuracy')
+)
+
+rnn_model %>% keras::fit(x_train, y_train, epochs = 10, batch_size = batch_size)
+rnn_results <- rnn_model %>% evaluate(x_test, y_test)
+rnn_classes <- rnn_model %>% predict_classes(x_test, batch_size = batch_size)
+
+# Confusion matrix
+table(y_test, rnn_classes)
+```
+ 
+# d-tree
+
+```{r}
+library(rpart)
+library(tree)
+library(ISLR)
+library(yardstick)
+library(partykit)
+library(mosaic)   # Load additional packages here 
+library(dplyr)
+library(tidyverse)
+library(tidymodels)
+library(knitr)
+library(yardstick)
+library(rpart)
+
+dtree_train <- logit_train
+dtree_train$targetValues <- as.factor(dtree_train$targetValues)
+dtree_test <- logit_test
+dtree_test$targetValues <- as.factor(dtree_test$targetValues)
+
+# parsnip d-tree
+dtree_news <- decision_tree(mode = "classification") %>%
+  set_engine("rpart") %>%
+  fit(targetValues ~ ., data = dtree_train) 
+
+```
+
+```{r}
+dtree_predictions <- dtree_test %>% 
+  select(targetValues) %>% 
+  mutate(targetValues_pred = dtree_news %>% 
+           predict(new_data = dtree_test, type = "class") %>% 
+           pull(.pred_class))
+
+confusion_matrix <- dtree_predictions %>% 
+  conf_mat(truth = targetValues, estimate = targetValues_pred)
+
+rpart.plot(dtree_predictions)
+# 60%, not very good
+```
+
+```{r}
+# using tree package
+predictors <- colnames(dtree_train)
+# remove target column 
+predictors <- predictors[- 807]
+# remove the words "next" and "break', these cause issues
+predictors <- predictors[- 604]
+predictors <- predictors[- 684]
+predictors <- paste(predictors, collapse = " + ")
+formula <- formula(paste("targetValues ~ ", predictors))
+
+tree_news <- tree::tree(formula, data=dtree_train)
+```
+ 
+```{r}
+tree_pred <- predict(tree_news, dtree_test, type="class")
+with(dtree_test, table(tree_pred, targetValues))
+plot(tree_news)
+text(tree_news, pretty = 0)
+#58% accurate
+```
+
+
+### random forest
+https://www.datacamp.com/community/tutorials/decision-trees-R
+```{r}
+library(randomForest)
+x_test_without_vars <- dtree_test %>% 
+  select(-c(`break`, `next`, targetValues))
+
+x_train_without_vars <- dtree_train %>% 
+  select(-c(`break`, `next`, targetValues))
+
+rf_news <- randomForest(x = x_train_without_vars, y = dtree_train$targetValues,
+                        xtest = x_test_without_vars, ytest = dtree_test$targetValues)
+rf_news
+```
+
+```{r}
+# rf_news <- randomForest(formula = formula, data = dtree_train)
+# pred <-  predict(rf_news, dtree_test)
+# table(dtree_test$targetValues, pred)
+# # 69.5%
+
+rf_news <- randomForest(x = x_train_without_vars, y = dtree_train$targetValues)
+pred <-  predict(rf_news, x_test_without_vars)
+table(dtree_test$targetValues, pred)
+ 
+
+```
+ 
+
+ 
