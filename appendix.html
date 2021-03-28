@@ -132,7 +132,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
       <nav role="navigation">
 
 <ul class="summary">
-<li class="chapter" data-level="" data-path="preface.html"><a href="preface.html"><i class="fa fa-check"></i>Preface</a></li>
+<li class="chapter" data-level="" data-path="index.html"><a href="index.html"><i class="fa fa-check"></i>Preface</a></li>
 <li class="chapter" data-level="1" data-path="introduction.html"><a href="introduction.html"><i class="fa fa-check"></i><b>1</b> Introduction</a></li>
 <li class="chapter" data-level="2" data-path="background.html"><a href="background.html"><i class="fa fa-check"></i><b>2</b> Background</a>
 <ul>
@@ -634,7 +634,7 @@ Figure 7.1: Validation data performance over multiple epochs in a MLP model
 <span id="cb63-16"><a href="appendix.html#cb63-16" aria-hidden="true" tabindex="-1"></a>mlp_results <span class="ot">&lt;-</span> mlp_model <span class="sc">%&gt;%</span> <span class="fu">evaluate</span>(<span class="at">x =</span> dtm_test_matrix, test_targets_numerical)</span>
 <span id="cb63-17"><a href="appendix.html#cb63-17" aria-hidden="true" tabindex="-1"></a>mlp_results</span></code></pre></div>
 <pre><code>##      loss  accuracy 
-## 0.5982565 0.6919060</code></pre>
+## 0.5965526 0.6814622</code></pre>
 <div class="sourceCode" id="cb65"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb65-1"><a href="appendix.html#cb65-1" aria-hidden="true" tabindex="-1"></a>mlp_predicted_values <span class="ot">&lt;-</span> mlp_model <span class="sc">%&gt;%</span> <span class="fu">predict_classes</span>(dtm_test_matrix, <span class="at">batch_size =</span> <span class="dv">1</span>)</span>
 <span id="cb65-2"><a href="appendix.html#cb65-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb65-3"><a href="appendix.html#cb65-3" aria-hidden="true" tabindex="-1"></a><span class="co"># confusion matrix</span></span>
@@ -646,16 +646,16 @@ Figure 7.1: Validation data performance over multiple epochs in a MLP model
 <span id="cb65-9"><a href="appendix.html#cb65-9" aria-hidden="true" tabindex="-1"></a>mlp_confusion_matrix<span class="sc">$</span>table</span></code></pre></div>
 <pre><code>##          Actual
 ## Predicted   0   1
-##         0 112  45
-##         1  73 153</code></pre>
+##         0 116  53
+##         1  69 145</code></pre>
 <div class="sourceCode" id="cb67"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb67-1"><a href="appendix.html#cb67-1" aria-hidden="true" tabindex="-1"></a><span class="co"># around 70% accuracy</span></span>
 <span id="cb67-2"><a href="appendix.html#cb67-2" aria-hidden="true" tabindex="-1"></a><span class="fu">round</span>(mlp_confusion_matrix<span class="sc">$</span>overall[<span class="dv">1</span>], <span class="dv">3</span>) </span></code></pre></div>
 <pre><code>## Accuracy 
-##    0.692</code></pre>
+##    0.681</code></pre>
 <div class="sourceCode" id="cb69"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb69-1"><a href="appendix.html#cb69-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 95% CI</span></span>
 <span id="cb69-2"><a href="appendix.html#cb69-2" aria-hidden="true" tabindex="-1"></a><span class="fu">round</span>(mlp_confusion_matrix<span class="sc">$</span>overall[<span class="dv">3</span><span class="sc">:</span><span class="dv">4</span>], <span class="dv">3</span>)  </span></code></pre></div>
 <pre><code>## AccuracyLower AccuracyUpper 
-##         0.643         0.738</code></pre>
+##         0.632         0.728</code></pre>
 <p>Our MLP performs reasonably well with an accuracy of around <span class="math inline">\(70\%\)</span> (and a 95% confidence interval around <span class="math inline">\([65\%, 75\%]\)</span>).</p>
 </div>
 <div id="recurrent-neural-network" class="section level3" number="7.3.2">
@@ -740,8 +740,8 @@ Figure 7.2: Validation data performance over multiple epochs in a RNN model
 <span id="cb74-24"><a href="appendix.html#cb74-24" aria-hidden="true" tabindex="-1"></a>rnn_confusion_matrix<span class="sc">$</span>table</span></code></pre></div>
 <pre><code>##          Actual
 ## Predicted   0   1
-##         0 138  71
-##         1  47 127</code></pre>
+##         0 125  58
+##         1  60 140</code></pre>
 <div class="sourceCode" id="cb76"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb76-1"><a href="appendix.html#cb76-1" aria-hidden="true" tabindex="-1"></a><span class="co"># around 68% accuracy</span></span>
 <span id="cb76-2"><a href="appendix.html#cb76-2" aria-hidden="true" tabindex="-1"></a><span class="fu">round</span>(rnn_confusion_matrix<span class="sc">$</span>overall[<span class="dv">1</span>], <span class="dv">3</span>) </span></code></pre></div>
 <pre><code>## Accuracy 
