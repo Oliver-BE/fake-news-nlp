@@ -11,7 +11,7 @@ Seven machine learning classification models (including **a random forest**, **a
 
 ## Viewing the Project
 
-The project can be viewed either as a formal PDF [here](https://oliver-be.ml/pdf/fake-news-nlp.pdf) or as a Bookdown website [here](https://oliver-be.ml/fake-news-nlp/).
+The project can be viewed either as a formal PDF [here](https://oliver-be.ml/pdf/fake-news-nlp.pdf) or as a [Bookdown](https://github.com/rstudio/bookdown) website [here](https://oliver-be.ml/fake-news-nlp/).
 
 ## License 
 * MIT License
